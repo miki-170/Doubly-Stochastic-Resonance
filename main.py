@@ -15,6 +15,12 @@ def initial_cond(N,c):
             x_n[i,j]=c*np.random.normal(0)
     return x_n
 
+
+def f(x):
+    return -x * (1+x**2)**2
+
+def g(x):
+    return 1 + x**2
 #def integration_step(N,x,x_n,D,d,dt,xi,ddzeta):
 
 
@@ -77,6 +83,7 @@ for i in range(N):
     x_n[0][i]=x[N-2][i]
     x_n[i][N-1]=x[i][1]
     x_n[i][0]=x[i][N-2]
+
 
 
 
