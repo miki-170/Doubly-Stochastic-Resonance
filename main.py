@@ -61,9 +61,10 @@ dt=1/Lim
 # Coefficient for generating IC
 c = 0.0001
 
-# The step to print the solution 
+# The number of printable steps
 N_p=5
 
+# Auxilary constant for printing
 tmp=Lim/N_p
 
 
