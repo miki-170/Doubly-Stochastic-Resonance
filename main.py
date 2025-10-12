@@ -52,17 +52,20 @@ d=2
 # Total number of steps
 Lim=1000
 
-# Time step
-dt=0.1
-
-# Time 
+# Initialise time 
 t=0
+
+# Time step
+dt=1/Lim
 
 # Coefficient for generating IC
 c = 0.0001
 
 # The step to print the solution 
-N_p=10
+N_p=5
+
+tmp=Lim/N_p
+
 
 #__________________________
 # Main 
@@ -74,37 +77,46 @@ x=np.zeros((N,N),dtype=float)
 #First Order Scheme
 #_________________________
 
-# Initialise IC
 
-# Main step
-x_n=initial_cond(N,c)
+for k in range(Lim):
 
-# Create noises
+    # Main step
+    x_n=initial_cond(N,c)
 
-dzeta=initial_cond(N,1)
-xi=initial_cond(N,1)
+    # Create noises
 
-
-# sq_m and sq_a
-
-sq_m=np.sqrt(xi.var()*dt)
-
-sq_a=np.sqrt(dzeta.var()*dt)
-
-# Boundary condtitions
+    dzeta=initial_cond(N,1)
+    xi=initial_cond(N,1)
 
 
-for i in range(N):
-    x_n[N-1][i]=x[1][i]
-    x_n[0][i]=x[N-2][i]
-    x_n[i][N-1]=x[i][1]
-    x_n[i][0]=x[i][N-2]
+    # sq_m and sq_a
+
+    sq_m=np.sqrt(xi.var()*dt)
+
+    sq_a=np.sqrt(dzeta.var()*dt)
+
+    # Boundary condtitions
+
+
+    for i in range(N):
+        x_n[N-1][i]=x[1][i]
+        x_n[0][i]=x[N-2][i]
+        x_n[i][N-1]=x[i][1]
+        x_n[i][0]=x[i][N-2]
 
 
 
-x_n=integration_step(N,x,x_n,D,d,dt,xi,dzeta,sq_m,sq_a)
+    x_n=integration_step(N,x,x_n,D,d,dt,xi,dzeta,sq_m,sq_a)
 
 
-t,x = update_system(t,dt,x_n)
+    t,x = update_system(t,dt,x_n)
 
-print(t)
+    if (k+1)/tmp==int((k+1)/tmp):
+        print("\n")
+        print(f"Step {k+1}")
+        print("\n")
+        print(x) 
+        print("\n")
+        
+
+    
