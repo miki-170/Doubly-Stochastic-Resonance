@@ -70,13 +70,13 @@ sq_m=np.sqrt(xi.var()*dt)
 sq_a=np.sqrt(dzeta.var()*dt)
 
 # Boundary condtitions
-value=0
+
 
 for i in range(N):
-    x_n[N-1][i]=value
-    x_n[0][i]=value
-    x_n[i][N-1]=value
-    x_n[i][0]=value
+    x_n[N-1][i]=x[1][i]
+    x_n[0][i]=x[N-2][i]
+    x_n[i][N-1]=x[i][1]
+    x_n[i][0]=x[i][N-2]
 
 
 
