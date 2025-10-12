@@ -21,14 +21,30 @@ def f(x):
 
 def g(x):
     return 1 + x**2
-#def integration_step(N,x,x_n,D,d,dt,xi,ddzeta):
 
+def der_g(x):
+    return 2*x
+
+def integration_step(N,x,x_n,D,d,dt,xi,dzeta,sq_m,sq_a):
+    xi_var=xi.var()
+    
+    for i in range(1,N-1):
+        for j in range(1,N-1):
+            x_n[i,j] = x[i][j] + dt * (f(x[i][j]) + D/d * (x[i+1][j] + x[i-1][j]+ x[i][j+1] + x[i][j-1] - d * x[i][j]) + xi_var/2 * g(x[i][j]) * der_g(x[i][j])) + sq_m * g(x[i][j]) * xi[i][j] + sq_a * dzeta[i][j]
+    
+    return x_n
+
+def update_system(t,dt,x_n):
+    return (t+dt,x_n)
 
 #_______________________
 # Constants
 
 # Size of the grid
 N=3
+
+# Strengh of the coupling
+D=1
 
 # Dimensions
 d=2
@@ -86,5 +102,9 @@ for i in range(N):
 
 
 
+x_n=integration_step(N,x,x_n,D,d,dt,xi,dzeta,sq_m,sq_a)
 
 
+t,x = update_system(t,dt,x_n)
+
+print(t)
