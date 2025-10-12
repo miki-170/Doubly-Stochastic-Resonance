@@ -15,16 +15,19 @@ def initial_cond(N,c):
             x_n[i,j]=c*np.random.normal(0)
     return x_n
 
-
+# Function f from the defintion
 def f(x):
     return -x * (1+x**2)**2
 
+# Function g from the definition 
 def g(x):
     return 1 + x**2
 
+# Derivative of g
 def der_g(x):
     return 2*x
 
+# Integration step for first order scheme
 def integration_step(N,x,x_n,D,d,dt,xi,dzeta,sq_m,sq_a):
     xi_var=xi.var()
     
@@ -34,23 +37,29 @@ def integration_step(N,x,x_n,D,d,dt,xi,dzeta,sq_m,sq_a):
     
     return x_n
 
+# Updating system with new t and x after integration
 def update_system(t,dt,x_n):
     return (t+dt,x_n)
+
+# Average of the function: 
+def av_state(x):
+    return np.mean(x)
+
 
 #_______________________
 # Constants
 
 # Size of the grid
-N=3
+N=4
 
 # Strengh of the coupling
-D=1
+D=20
 
 # Dimensions
 d=2
 
 # Total number of steps
-Lim=1000
+Lim=10000
 
 # Initialise time 
 t=0
@@ -62,7 +71,7 @@ dt=1/Lim
 c = 0.0001
 
 # The number of printable steps
-N_p=5
+N_p=10
 
 # Auxilary constant for printing
 tmp=Lim/N_p
@@ -78,6 +87,8 @@ x=np.zeros((N,N),dtype=float)
 #First Order Scheme
 #_________________________
 
+#Space for m_values
+m_values=[]
 
 for k in range(Lim):
 
@@ -112,12 +123,20 @@ for k in range(Lim):
 
     t,x = update_system(t,dt,x_n)
 
-    if (k+1)/tmp==int((k+1)/tmp):
+    # Printing N_p results while modelling
+    """if (k+1)/tmp==int((k+1)/tmp):
         print("\n")
         print(f"Step {k+1}")
         print("\n")
         print(x) 
-        print("\n")
-        
+        print("\n")"""
+    # Calculating average state of the system
+    m_instant = av_state(x)
+
+    m_values.append(m_instant)
+
+m_average=np.mean(np.abs(m_values))
+print(m_average)
+
 
     
