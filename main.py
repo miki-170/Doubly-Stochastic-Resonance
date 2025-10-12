@@ -13,13 +13,13 @@ def initial_cond(N,c):
     for i in range(N):
         for j in range(N):
             x_n[i,j]=c*np.random.normal(0)
-
+    return x_n
 
 #_______________________
 # Constants
 
 # Size of the grid
-N=10
+N=3
 
 # Dimensions
 d=2
@@ -35,5 +35,8 @@ t=0
 
 # Coefficient for generating IC
 c = 0.0001
+
+
+print(initial_cond(N,c))
 
 
