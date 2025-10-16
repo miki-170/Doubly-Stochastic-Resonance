@@ -194,11 +194,12 @@ for repetition in range(S):
 
 
 # Adjusting the graph
-plt.grid()
-plt.xlim(0,T)
-plt.ylabel("Average field of oscilators")
-plt.xlabel("Time")
-plt.show()
+if G==1:
+    plt.grid()
+    plt.xlim(0,T)
+    plt.ylabel("Average field of oscilators")
+    plt.xlabel("Time")
+    plt.show()
 
 
 
