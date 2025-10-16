@@ -51,64 +51,10 @@ def update_system(t,dt,x_n):
 
 
 
+def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
 
-#_______________________
-# Constants
-
-# Size of the grid
-N=10
-
-# Strengh of the coupling
-D=20
-
-# Dimensions
-d=2
-
-# Initialise time 
-t=0
-
-# Total time
-
-T=10
-
-# Time step
-dt=0.00001
-
-# Total number of steps
-Lim=int(1/dt)
-
-# Number of simulations 
-
-S=1
-
-
-# Coefficient for generating IC
-c = 0.0001
-
-# Auxilary constant for printing
-tmp=Lim/T
-
-# print solutions A=1 yes A=0 no
-A=0
-
-#__________________________
-# Main 
-
-#Second Order Scheme
-#_________________________
-
-#Space for values for simulation
-
-
-dzeta_var_values=[3]
-
-xi_var_values=[5]
-
-m_final=[]
-
-for repetition in range(S):
+    # Initate the array for the average field potential 
     m_values=[]
-
 
 
     for k in range(Lim):
@@ -129,14 +75,14 @@ for repetition in range(S):
 
         # Create noises
 
-        dzeta=initial_cond(N,1)*np.sqrt(dt)
-        xi=initial_cond(N,1)*np.sqrt(dt)
+        dzeta=initial_cond(N,np.sqrt(dz_var))*np.sqrt(dt)
+        xi=initial_cond(N,np.sqrt(xi_var))*np.sqrt(dt)
 
         # sq_m and sq_a
 
-        sq_m=np.sqrt(xi.var()*dt)
+        sq_m=np.sqrt(xi_var*dt)
 
-        sq_a=np.sqrt(dzeta.var()*dt)
+        sq_a=np.sqrt(dz_var*dt)
 
         # Boundary condtitions
 
@@ -180,20 +126,78 @@ for repetition in range(S):
         
         del(x_tmr)
 
+    # Plotting the average mean field
     m_values.append(np.mean(x))
-    xs=np.linspace(0,T,len(m_values))
+    if G==1:
+        xs=np.linspace(0,T,len(m_values))
+        plt.plot(xs,m_values)
 
 
-    plt.plot(xs,m_values)
+#_______________________
+# Constants
+
+# Size of the grid
+N=10
+
+# Dimensions
+d=2
+
+# Initialise time 
+t=0
+
+# Total time
+
+T=10
+
+# Time step
+dt=0.00001
+
+# Total number of steps
+Lim=int(1/dt)
+
+# Number of simulations 
+
+S=1
+
+# Coefficient for generating IC
+c = 0.0001
+
+# Auxilary constant for printing
+tmp=Lim/T
+
+# print solutions A=1 yes A=0 no
+A=0
+
+# Graph solutions G=1 yes G=0 no
+G=1
+
+#__________________________
+# Main 
+
+#Second Order Scheme
+#_________________________
+
+#Space for values for simulation
+
+dzeta_var_values=[1]
+
+xi_var_values=[1]
+
+# Strengh of the coupling
+D=20
+
+for repetition in range(S):
+    
+    for xi_var,dz_var in zip(xi_var_values,dzeta_var_values):
+       run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G)
+
 
 
 # Adjusting the graph
 plt.grid()
-plt.xlim(0,10)
+plt.xlim(0,T)
 plt.ylabel("Average field of oscilators")
 plt.xlabel("Time")
-
-
 plt.show()
 
 
