@@ -1,8 +1,8 @@
 # Importing neccesary libraries
 import numpy as np 
 import matplotlib.pyplot as plt
-
-
+import time
+start_time=time.time()
 
 # Functions 
 #_______________________
@@ -112,6 +112,9 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
         # Updating the system 
         t,x = update_system(t, dt, x_n)
 
+        # checking if it diverged
+        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
+            return 0
         
 
         if A==1:
@@ -123,7 +126,6 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
                 print(x) 
                 print("\n")
         
-        
         del(x_tmr)
 
     # Plotting the average mean field
@@ -132,6 +134,15 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
         xs=np.linspace(0,T,len(m_values))
         plt.plot(xs,m_values)
 
+        # Adjusting the graph
+        plt.grid()
+        plt.xlim(0,T)
+        plt.ylabel("Average field of oscilators")
+        plt.xlabel("Time")
+        plt.show()
+
+
+    return 1
 
 #_______________________
 # Constants
@@ -179,30 +190,29 @@ G=1
 
 #Space for values for simulation
 
-dzeta_var_values=[1]
+dzeta_var_values=[0]
 
-xi_var_values=[1]
+xi_var_values=[10]
 
 # Strengh of the coupling
-D=20
+D_values=[20]
 
 for repetition in range(S):
+
     
-    for xi_var,dz_var in zip(xi_var_values,dzeta_var_values):
-       run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G)
+    for dz_var in dzeta_var_values:
+       
+       # Create the table of convergence, if value is 1 it converged, if it is 0 it diverged
+       div=np.zeros((len(D_values),len(xi_var_values)))
+
+       for xi_var, i in zip(xi_var_values,range(len(xi_var_values))):
+            for Ds, j in zip(D_values,range(len(D_values))):
+                div[j][i] = run_simulation(N,c,dt,Ds,d,t,xi_var,dz_var,A,G)
+    
+    print(div)
 
 
-
-# Adjusting the graph
-if G==1:
-    plt.grid()
-    plt.xlim(0,T)
-    plt.ylabel("Average field of oscilators")
-    plt.xlabel("Time")
-    plt.show()
-
-
-
+print(f"{round(time.time()-start_time,2)}seconds")
 
 
 
