@@ -27,21 +27,22 @@ def der_g(x):
     return 2*x
 
 # Intermediate integrating step for second order scheme
-def inter_integration_step(N,x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a):
+def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a):
+    
+    laplacian = (x[2: , 1:-1] + x[:-2 , 1:-1]+ x[1:-1 , 2:] + x[1:-1 , :-2] - d * x[1:-1 , 1:-1])
 
-    for i in range(1,N-1):
-        for j in range(1,N-1):
-            x_tmr[i,j] = x[i][j] + dt * (f(x[i][j]) + D/(d) * (x[i+1][j] + x[i-1][j]+ x[i][j+1] + x[i][j-1] - d * x[i][j]))  + sq_m * g(x[i][j]) * xi[i][j] + sq_a * dzeta[i][j]
+    x_tmr[1:-1, 1:-1] = x[1:-1, 1:-1] + dt * (f(x[1:-1, 1:-1]) + D/d * laplacian)  + sq_m * g(x[1:-1, 1:-1]) * xi[1:-1, 1:-1] + sq_a * dzeta[1:-1, 1:-1]
    
     return x_tmr
 
 # Main integrating step for second order scheme
 
-def main_integration_step(N,x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta):
+def main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta):
 
-    for i in range(1,N-1):
-        for j in range(1,N-1):
-            x_n[i][j] = x[i][j]+( f(x[i][j])+ D/d * (x[i+1][j] + x[i-1][j]+ x[i][j+1] + x[i][j-1] - d* x[i][j]) +f(x_tmr[i][j] + D/d * (x_tmr[i+1][j] + x_tmr[i-1][j]+ x_tmr[i][j+1] + x_tmr[i][j-1] - d* x_tmr[i][j])) )*dt/2 + sq_m * g(x[i][j]) * xi[i][j]/2 + sq_m * g(x_tmr[i][j])*xi[i][j]/2 + sq_a * dzeta[i][j]
+    laplacian_x = (x[2:, 1:-1] + x[:-2, 1:-1]+ x[1:-1, 2:] + x[1:-1, :-2] - d * x[1:-1, 1:-1])
+    laplacian_tmr = (x_tmr[2:, 1:-1] + x_tmr[:-2 , 1:-1]+ x_tmr[1:-1, 2:] + x_tmr[1:-1 , :-2] - d * x_tmr[1:-1 , 1:-1])
+
+    x_n[1:-1 , 1:-1] = x[1:-1 , 1:-1] + ( f(x[1:-1 , 1:-1])+ D/d * laplacian_x +f(x_tmr[1:-1 , 1:-1]) + D/d * laplacian_tmr)*dt/2 + sq_m * g(x[1:-1 , 1:-1]) * xi[1:-1 , 1:-1]/2 + sq_m * g(x_tmr[1:-1 , 1:-1])*xi[1:-1 , 1:-1]/2 + sq_a * dzeta[1:-1 , 1:-1]
 
     return x_n
 
@@ -56,6 +57,10 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
     # Initate the array for the average field potential 
     m_values=[]
 
+    # sq_m and sq_a
+
+    sq_m=np.sqrt(xi_var*dt)
+    sq_a=np.sqrt(dz_var*dt)
 
     for k in range(Lim):
         
@@ -78,35 +83,30 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
         dzeta=initial_cond(N,np.sqrt(dz_var))*np.sqrt(dt)
         xi=initial_cond(N,np.sqrt(xi_var))*np.sqrt(dt)
 
-        # sq_m and sq_a
-
-        sq_m=np.sqrt(xi_var*dt)
-
-        sq_a=np.sqrt(dz_var*dt)
 
         # Boundary condtitions
 
-        x_tmr[N-1][:]=x[1][:]
-        x_tmr[0][:]=x[N-2][:]
-        x_tmr[:][N-1]=x[:][1]
-        x_tmr[:][0]=x[:][N-2]
+        x_tmr[N-1,:]=x[1,:]
+        x_tmr[0,:]=x[N-2,:]
+        x_tmr[:,N-1]=x[:,1]
+        x_tmr[:,0]=x[:,N-2]
 
         # Predictor step
         
-        x_tmr=inter_integration_step(N,x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a)
+        x_tmr=inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a)
 
         
         # Boundary conditions for the main step
 
-        x_n[N-1][:]=x_tmr[1][:]
-        x_n[0][:]=x_tmr[N-2][:]
-        x_n[:][N-1]=x_tmr[:][1]
-        x_n[:][0]=x_tmr[:][N-2]
+        x_n[N-1,:]=x_tmr[1,:]
+        x_n[0,:]=x_tmr[N-2,:]
+        x_n[:,N-1]=x_tmr[:,1]
+        x_n[:,0]=x_tmr[:,N-2]
 
 
         # Main Step
 
-        x_n = main_integration_step(N,x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta)
+        x_n = main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta)
 
 
         # Updating the system 
@@ -192,10 +192,10 @@ G=1
 
 dzeta_var_values=[0]
 
-xi_var_values=[10]
+xi_var_values=[8,10]
 
 # Strengh of the coupling
-D_values=[20]
+D_values=[10]
 
 for repetition in range(S):
 
