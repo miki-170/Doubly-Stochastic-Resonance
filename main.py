@@ -57,6 +57,10 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
     # Initate the array for the average field potential 
     m_values=[]
 
+    # Create new system
+    x=np.zeros((N,N))
+    x_n=initial_cond(N)*c
+
     # sq_m and sq_a
 
     sq_m=np.sqrt(xi_var*dt)
@@ -64,12 +68,6 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
 
     for k in range(Lim):
         
-        # Create new system
-        if k==0:
-            x=np.zeros((N,N))
-            x_n=initial_cond(N)*c
-        
-
         # Calculating average state of the system
         
         m_values.append(np.mean(x))
@@ -80,16 +78,16 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
 
         # Create noises
 
-        dzeta=initial_cond(N,np.sqrt(dz_var))*np.sqrt(dt)
-        xi=initial_cond(N,np.sqrt(xi_var))*np.sqrt(dt)
+        dzeta=initial_cond(N,np.sqrt(dz_var))
+        xi=initial_cond(N,np.sqrt(xi_var))
 
 
         # Boundary condtitions
 
-        x_tmr[N-1,:]=x[1,:]
-        x_tmr[0,:]=x[N-2,:]
-        x_tmr[:,N-1]=x[:,1]
-        x_tmr[:,0]=x[:,N-2]
+        x_tmr[-1,:]=x[1,:]
+        x_tmr[0,:]=x[-2,:]
+        x_tmr[:,-1]=x[:,1]
+        x_tmr[:,0]=x[:,-2]
 
         # Predictor step
         
@@ -98,10 +96,10 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
         
         # Boundary conditions for the main step
 
-        x_n[N-1,:]=x_tmr[1,:]
-        x_n[0,:]=x_tmr[N-2,:]
-        x_n[:,N-1]=x_tmr[:,1]
-        x_n[:,0]=x_tmr[:,N-2]
+        x_n[-1,:]=x_tmr[1,:]
+        x_n[0,:]=x_tmr[-2,:]
+        x_n[:,-1]=x_tmr[:,1]
+        x_n[:,0]=x_tmr[:,-2]
 
 
         # Main Step
@@ -134,12 +132,7 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
         xs=np.linspace(0,T,len(m_values))
         plt.plot(xs,m_values)
 
-        # Adjusting the graph
-        plt.grid()
-        plt.xlim(0,T)
-        plt.ylabel("Average field of oscilators")
-        plt.xlabel("Time")
-        plt.show()
+        
 
 
     return 1
@@ -168,7 +161,7 @@ Lim=int(1/dt)
 
 # Number of simulations 
 
-S=1
+S=10
 
 # Coefficient for generating IC
 c = 0.0001
@@ -190,9 +183,9 @@ G=1
 
 #Space for values for simulation
 
-dzeta_var_values=[0]
+dzeta_var_values=[1]
 
-xi_var_values=[8,10]
+xi_var_values=[1]
 
 # Strengh of the coupling
 D_values=[10]
@@ -212,8 +205,16 @@ for repetition in range(S):
     print(div)
 
 
-print(f"{round(time.time()-start_time,2)}seconds")
 
 
 
+# Adjusting the graph
+plt.grid()
+plt.xlim(0,T)
+plt.ylabel("Average field of oscilators")
+plt.xlabel("Time")
+plt.title(f"Simulations for xi_var = {xi_var_values} , dz_var= {dzeta_var_values} and D = {D_values}")
+plt.show()
         
+
+print(f"{round(time.time()-start_time,2)}seconds")
