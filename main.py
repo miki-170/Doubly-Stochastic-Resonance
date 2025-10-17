@@ -78,8 +78,8 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
 
         # Create noises
 
-        dzeta=initial_cond(N,np.sqrt(dz_var))
-        xi=initial_cond(N,np.sqrt(xi_var))
+        dzeta=initial_cond(N,np.sqrt(dz_var))*np.sqrt(dt)
+        xi=initial_cond(N,np.sqrt(xi_var))*np.sqrt(dt)
 
 
         # Boundary condtitions
@@ -89,6 +89,10 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
         x_tmr[:,-1]=x[:,1]
         x_tmr[:,0]=x[:,-2]
 
+        # checking if it diverged
+        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
+            return 0
+        
         # Predictor step
         
         x_tmr=inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a)
@@ -101,11 +105,13 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
         x_n[:,-1]=x_tmr[:,1]
         x_n[:,0]=x_tmr[:,-2]
 
+        # checking if it diverged
+        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
+            return 0
 
         # Main Step
 
         x_n = main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta)
-
 
         # Updating the system 
         t,x = update_system(t, dt, x_n)
@@ -130,7 +136,7 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
     m_values.append(np.mean(x))
     if G==1:
         xs=np.linspace(0,T,len(m_values))
-        plt.plot(xs,m_values)
+        plt.plot(xs,m_values,label=f"variance of xi is {xi_var} ")
 
         
 
@@ -141,7 +147,7 @@ def run_simulation(N,c,dt,D,d,t,xi_var,dz_var,A,G):
 # Constants
 
 # Size of the grid
-N=10
+N=4
 
 # Dimensions
 d=2
@@ -161,7 +167,7 @@ Lim=int(1/dt)
 
 # Number of simulations 
 
-S=10
+S=1
 
 # Coefficient for generating IC
 c = 0.0001
@@ -183,9 +189,9 @@ G=1
 
 #Space for values for simulation
 
-dzeta_var_values=[1]
+dzeta_var_values=[0]
 
-xi_var_values=[1]
+xi_var_values=[0,1,2,4,6,8,10]
 
 # Strengh of the coupling
 D_values=[10]
@@ -214,6 +220,7 @@ plt.xlim(0,T)
 plt.ylabel("Average field of oscilators")
 plt.xlabel("Time")
 plt.title(f"Simulations for xi_var = {xi_var_values} , dz_var= {dzeta_var_values} and D = {D_values}")
+plt.legend()
 plt.show()
         
 
