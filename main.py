@@ -129,8 +129,8 @@ for repetition in range(S):
 
         # Create noises
 
-        dzeta=initial_cond(N,1)*np.sqrt(dt)
-        xi=initial_cond(N,1)*np.sqrt(dt)
+        dzeta=initial_cond(N,1)
+        xi=initial_cond(N,1)
 
         # sq_m and sq_a
 
