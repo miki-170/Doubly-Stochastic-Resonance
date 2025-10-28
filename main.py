@@ -35,9 +35,16 @@ def der_g(x):
 # Intermediate integrating step for second order scheme
 def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t):
     
-    laplacian = (x[2: , 1:-1] + x[:-2 , 1:-1]+ x[1:-1 , 2:] + x[1:-1 , :-2] - d * x[1:-1 , 1:-1])
+    """laplacian = (x[2: , 1:-1] + x[:-2 , 1:-1]+ x[1:-1 , 2:] + x[1:-1 , :-2] - d * x[1:-1 , 1:-1])
 
     x_tmr[1:-1, 1:-1] = x[1:-1, 1:-1] + dt * (f(x[1:-1, 1:-1]) + D/d * laplacian  )  + sq_m * g(x[1:-1, 1:-1]) * xi[1:-1, 1:-1] + sq_a * dzeta[1:-1, 1:-1]
+   
+    return x_tmr"""
+
+    # implented calculating the Laplacian over the whole grid
+    laplacian = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - d * x)
+
+    x_tmr = x + dt * (f(x) + D/d * laplacian  )  + sq_m * g(x) * xi+ sq_a * dzeta
    
     return x_tmr
 
@@ -45,10 +52,16 @@ def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t):
 
 def main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t):
 
-    laplacian_x = (x[2:, 1:-1] + x[:-2, 1:-1]+ x[1:-1, 2:] + x[1:-1, :-2] - d * x[1:-1, 1:-1])
+    """laplacian_x = (x[2:, 1:-1] + x[:-2, 1:-1]+ x[1:-1, 2:] + x[1:-1, :-2] - d * x[1:-1, 1:-1])
     laplacian_tmr = (x_tmr[2:, 1:-1] + x_tmr[:-2 , 1:-1]+ x_tmr[1:-1, 2:] + x_tmr[1:-1 , :-2] - d * x_tmr[1:-1 , 1:-1])
 
     x_n[1:-1 , 1:-1] = x[1:-1 , 1:-1] +  (f(x[1:-1 , 1:-1])+ D/d * laplacian_x +f(x_tmr[1:-1 , 1:-1]) + D/d * laplacian_tmr )*dt*0.5 + sq_m * g(x[1:-1 , 1:-1]) * xi[1:-1 , 1:-1]/2 + sq_m * g(x_tmr[1:-1 , 1:-1])*xi[1:-1 , 1:-1]/2 + sq_a * dzeta[1:-1 , 1:-1]
+    """
+    # implented calculating the Laplacian over the whole grid
+    laplacian_x = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - d * x)
+    laplacian_tmr = (np.roll(x_tmr,1,axis=0) + np.roll(x_tmr,-1,axis=0)+ np.roll(x_tmr,1,axis=1) + np.roll(x_tmr,-1,axis=1)  - d * x_tmr)
+
+    x_n = x +  (f(x)+ D/d * laplacian_x +f(x_tmr) + D/d * laplacian_tmr )*dt/2 + sq_m * g(x) * xi/2 + sq_m * g(x_tmr)*xi/2 + sq_a * dzeta
 
     return x_n
 
@@ -92,10 +105,10 @@ def run_simulation_second_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
 
         # Boundary condtitions
 
-        x_tmr[-1,:]=0#x[1,:]
-        x_tmr[0,:]=0#x[-2,:]
-        x_tmr[:,-1]=0#[:,1]
-        x_tmr[:,0]=0#x[:,-2]
+        x_tmr[-1,:]=x[1,:]
+        x_tmr[0,:]=x[-2,:]
+        x_tmr[:,-1]=x[:,1]
+        x_tmr[:,0]=x[:,-2]
 
         # checking if it diverged
         if np.any(np.isinf(x)) or np.any(np.isnan(x)):
@@ -111,10 +124,10 @@ def run_simulation_second_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
         # Boundary conditions for the main step
 
         
-        x_n[-1,:]=0#x_tmr[1,:]
-        x_n[0,:]=0#x_tmr[-2,:]
-        x_n[:,-1]=0#x_tmr[:,1]
-        x_n[:,0]=0#x_tmr[:,-2]
+        x_n[-1,:]=x_tmr[1,:]
+        x_n[0,:]=x_tmr[-2,:]
+        x_n[:,-1]=x_tmr[:,1]
+        x_n[:,0]=x_tmr[:,-2]
 
        
 
@@ -170,6 +183,8 @@ def run_simulation_second_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
         plt.legend(loc='upper right')
         plt.show()
 
+
+    # !!!!!!!!! # You should exclude the time before the system converges to the mean value !!!!!!!
     m_arr = np.array(m_values)  # your recorded mean-field trace
     transient = int(0.2 * len(m_arr))   # drop first 20%
     steady_m_abs = np.mean(np.abs(m_arr[transient:]))
@@ -269,7 +284,7 @@ t=0
 
 # Total time
 
-T=10
+T=30
 
 # Time step
 dt=10**(-4)
@@ -279,7 +294,7 @@ Lim=int(1/dt)*T
 
 # Number of simulations 
 
-S=1
+S=3
 
 # Coefficient for generating IC
 c = 0.0001
@@ -305,10 +320,10 @@ G=1
 
 dzeta_var_values=[0]
 
-xi_var_values=[0,1,2,3,4,5,6,7]
+xi_var_values=[2]
 
 # Strengh of the coupling
-D_values=[0]
+D_values=[20]
 
 
 
