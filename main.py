@@ -35,11 +35,6 @@ def der_g(x):
 # Intermediate integrating step for second order scheme
 def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t):
     
-    """laplacian = (x[2: , 1:-1] + x[:-2 , 1:-1]+ x[1:-1 , 2:] + x[1:-1 , :-2] - d * x[1:-1 , 1:-1])
-
-    x_tmr[1:-1, 1:-1] = x[1:-1, 1:-1] + dt * (f(x[1:-1, 1:-1]) + D/d * laplacian  )  + sq_m * g(x[1:-1, 1:-1]) * xi[1:-1, 1:-1] + sq_a * dzeta[1:-1, 1:-1]
-   
-    return x_tmr"""
 
     # implented calculating the Laplacian over the whole grid
     laplacian = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - d * x)
@@ -52,11 +47,7 @@ def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t):
 
 def main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t):
 
-    """laplacian_x = (x[2:, 1:-1] + x[:-2, 1:-1]+ x[1:-1, 2:] + x[1:-1, :-2] - d * x[1:-1, 1:-1])
-    laplacian_tmr = (x_tmr[2:, 1:-1] + x_tmr[:-2 , 1:-1]+ x_tmr[1:-1, 2:] + x_tmr[1:-1 , :-2] - d * x_tmr[1:-1 , 1:-1])
-
-    x_n[1:-1 , 1:-1] = x[1:-1 , 1:-1] +  (f(x[1:-1 , 1:-1])+ D/d * laplacian_x +f(x_tmr[1:-1 , 1:-1]) + D/d * laplacian_tmr )*dt*0.5 + sq_m * g(x[1:-1 , 1:-1]) * xi[1:-1 , 1:-1]/2 + sq_m * g(x_tmr[1:-1 , 1:-1])*xi[1:-1 , 1:-1]/2 + sq_a * dzeta[1:-1 , 1:-1]
-    """
+    
     # implented calculating the Laplacian over the whole grid
     laplacian_x = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - d * x)
     laplacian_tmr = (np.roll(x_tmr,1,axis=0) + np.roll(x_tmr,-1,axis=0)+ np.roll(x_tmr,1,axis=1) + np.roll(x_tmr,-1,axis=1)  - d * x_tmr)
@@ -284,7 +275,7 @@ t=0
 
 # Total time
 
-T=30
+T=50
 
 # Time step
 dt=10**(-4)
