@@ -32,160 +32,14 @@ def g(x):
 def der_g(x):
     return 2*x
 
-# Intermediate integrating step for second order scheme
-def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t):
-    
-
-    # implented calculating the Laplacian over the whole grid
-    laplacian = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - d * x)
-
-    x_tmr = x + dt * (f(x) + D/d * laplacian  )  + sq_m * g(x) * xi+ sq_a * dzeta
-   
-    return x_tmr
-
-# Main integrating step for second order scheme
-
-def main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t):
-
-    
-    # implented calculating the Laplacian over the whole grid
-    laplacian_x = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - d * x)
-    laplacian_tmr = (np.roll(x_tmr,1,axis=0) + np.roll(x_tmr,-1,axis=0)+ np.roll(x_tmr,1,axis=1) + np.roll(x_tmr,-1,axis=1)  - d * x_tmr)
-
-    x_n = x +  (f(x)+ D/d * laplacian_x +f(x_tmr) + D/d * laplacian_tmr )*dt/2 + sq_m * g(x) * xi/2 + sq_m * g(x_tmr)*xi/2 + sq_a * dzeta
-
-    return x_n
-
-
 def first_integration_step(x,x_n,D,d,dt,sq_m,sq_a,xi,dzeta,t,xi_var):
+
 
     laplacian =(x[2:,1:-1] + x[:-2,1:-1] + x[1:-1,2:] + x[1:-1,:-2] - d* x[1:-1,1:-1]) 
 
     x_n[1:-1,1:-1] = x[1:-1,1:-1] + (f(x[1:-1,1:-1]) + D/d* laplacian + xi_var/2*g(x[1:-1,1:-1])* der_g(x[1:-1,1:-1]) + F(t))*dt + sq_m * g(x[1:-1,1:-1]) *xi[1:-1,1:-1] +sq_a*dzeta[1:-1,1:-1]
 
     return x_n
-# Updating system with new t and x after integration
-def update_system(t,dt,x_n):
-    return (t+dt,x_n)
-
-
-def run_simulation_second_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
-
-    # Initate the array for the average field potential 
-    m_values=[]
-
-    # Create new system
-    x = initial_cond(N, v=1) * c   # initial field, small random around 0
-    
-    x_n = np.zeros((N,N))
-
-    x_tmr= np.zeros((N,N))
-       
-    # sq_m and sq_a
-
-    sq_m=np.sqrt(xi_var*dt)
-    sq_a=np.sqrt(dz_var*dt)
-
-    for k in range(Lim):
-    
-        # Create noises
-
-        dzeta=initial_cond(N)
-        xi=initial_cond(N)
-    
-
-        # Boundary condtitions
-
-        x_tmr[-1,:]=x[1,:]
-        x_tmr[0,:]=x[-2,:]
-        x_tmr[:,-1]=x[:,1]
-        x_tmr[:,0]=x[:,-2]
-
-        # checking if it diverged
-        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
-            return 0, 0
-        
-
-        
-        # Predictor step
-        
-        x_tmr=inter_integration_step(x,x_tmr,D,2*d,dt,xi,dzeta,sq_m,sq_a,t)
-        
-        
-        # Boundary conditions for the main step
-
-        
-        x_n[-1,:]=x_tmr[1,:]
-        x_n[0,:]=x_tmr[-2,:]
-        x_n[:,-1]=x_tmr[:,1]
-        x_n[:,0]=x_tmr[:,-2]
-
-       
-
-
-        # checking if it diverged
-        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
-            return 0 ,0
-
-        # Main Step
-
-        x_n = main_integration_step(x,x_n,x_tmr,D,2*d,dt,sq_m,sq_a,xi,dzeta,t)
-        
-        
-
-        # Updating the system 
-        t,x = update_system(t, dt, x_n)
-
-       
-
-        # Calculating average state of the system
-        
-        m_values.append(np.mean(x))
-
-        # checking if it diverged
-        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
-            return 0, 0
-        
-
-        if A==1:
-            # Printing N_p results while modelling
-            if (k+1)/tmp==int((k+1)/tmp):
-                print("\n")
-                print(f"Step {k+1}")
-                print("\n")
-                #print(x) 
-                print("\n")
-                
-        
-        
-        del(xi)
-        del(dzeta)
-        
-    # Plotting the average mean field
-    m_values.append(np.mean(x))
-    if G==1:
-        xs=np.linspace(0,T,len(m_values))
-        plt.plot(xs,m_values,label=f"variance of xi is {xi_var} ")
-        plt.grid()
-        plt.xlim(0,T)
-        plt.ylabel("Average field of oscilators")
-        plt.xlabel("Time")
-        plt.title(f"Simulations for xi_var = {xi_var_values} , dz_var= {dzeta_var_values} and D = {D_values}")
-        plt.legend(loc='upper right')
-        plt.show()
-
-
-    # !!!!!!!!! # You should exclude the time before the system converges to the mean value !!!!!!!
-    m_arr = np.array(m_values)  # your recorded mean-field trace
-    transient = int(0.2 * len(m_arr))   # drop first 20%
-    steady_m_abs = np.mean(np.abs(m_arr[transient:]))
-    steady_m_mean = np.mean(m_arr[transient:])
-    print("Order parameter (⟨|m|⟩ after transient) = ", steady_m_abs)
-    print("Order parameter (⟨m⟩ after transient) = ", steady_m_mean)
-
-    del(x)
-    return 1, steady_m_abs
-
 
 
 
@@ -259,33 +113,164 @@ def run_simulation_first_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
     return 1, m_values[-1]
 
 
+
+# Intermediate integrating step for second order scheme
+def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t,xi_var):
+    
+
+    # implented calculating the Laplacian over the whole grid
+    laplacian = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - 2*d * x)
+
+    x_tmr = x + dt * (f(x) + D/(2*d) * laplacian)  + sq_m * g(x) * xi+ sq_a * dzeta
+   
+    return x_tmr
+
+# Main integrating step for second order scheme
+
+def main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t,xi_var):
+
+    
+    # implented calculating the Laplacian over the whole grid
+    laplacian_x = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - (2*d)* x)
+    laplacian_tmr = (np.roll(x_tmr,1,axis=0) + np.roll(x_tmr,-1,axis=0)+ np.roll(x_tmr,1,axis=1) + np.roll(x_tmr,-1,axis=1)  - (2*d) * x_tmr)
+
+    x_n = x +  (f(x)+ D/(2*d) * laplacian_x +  f(x_tmr) + D/(2*d) * laplacian_tmr )*dt/2 + sq_m * g(x) * xi/2 + sq_m * g(x_tmr)*xi/2 + sq_a * dzeta
+
+    return x_n
+
+
+# Updating system with new t and x after integration
+def update_system(t,dt,x_n):
+    return (t+dt,x_n)
+
+
+def run_simulation_second_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
+
+    # Initate the array for the average field potential 
+    m_values=[]
+
+    # Create new system
+    x = initial_cond(N, v=1) * c   # initial field, small random around 0
+    
+    x_n = np.zeros((N,N))
+
+    x_tmr= np.zeros((N,N))
+       
+    # sq_m and sq_a
+
+    sq_m=np.sqrt(xi_var*dt)
+    sq_a=np.sqrt(dz_var*dt)
+
+    for k in range(Lim):
+    
+        # Create noises
+
+        dzeta=initial_cond(N)
+        xi=initial_cond(N)
+    
+
+        # checking if it diverged
+        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
+            return 0, 0
+        
+
+        
+        # Predictor step
+        
+        x_tmr=inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t,xi_var)
+        
+        # checking if it diverged
+        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
+            return 0 ,0
+
+        # Main Step
+
+        x_n = main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t,xi_var)
+        
+        
+
+        # Updating the system 
+        t,x = update_system(t, dt, x_n)
+
+       
+
+        # Calculating average state of the system
+        
+        m_values.append(np.mean(x))
+
+        # checking if it diverged
+        if np.any(np.isinf(x)) or np.any(np.isnan(x)):
+            return 0, 0
+        
+
+        if A==1:
+            # Printing N_p results while modelling
+            if (k+1)/tmp==int((k+1)/tmp):
+                print("\n")
+                print(f"Step {k+1}")
+                print("\n")
+                #print(x) 
+                print("\n")
+                
+        
+        
+        del(xi)
+        del(dzeta)
+        
+    # Plotting the average mean field
+    m_values.append(np.mean(x))
+    if G==1:
+        xs=np.linspace(0,T,len(m_values))
+        plt.plot(xs,m_values)
+        plt.grid()
+        plt.xlim(0,T)
+        plt.ylabel("Average field of oscilators")
+        plt.xlabel("Time")
+        plt.title(f"Simulations for xi_var = {xi_var} , dz_var= {dz_var} and D = {D}")
+        plt.savefig(f'Graphs/xi_var-equal-to-{xi_var}.png')
+        plt.clf()
+
+
+    # Excluding the time before the system converges to a steady state
+    m_arr = np.array(m_values) # your recorded mean-field trace
+    dr=0.4# drop first 40 % of time units
+    #dr/=T
+    transient = int(dr * len(m_arr))   
+    steady_m_abs = np.mean(np.abs(m_arr[transient:]))
+    print("Order parameter (⟨|m|⟩ after transient) = ", steady_m_abs)
+    del(x)
+    return 1, steady_m_abs
+
+
+
+
         
 
 #_______________________
 # Constants
 
 # Size of the grid
-N=18
+N=50
 
 # Dimensions
 d=2
 
 # Initialise time 
-t=0
+t_init=0
 
 # Total time
 
-T=50
+T=200
 
 # Time step
-dt=10**(-4)
+dt=10**(-5)
 
 # Total number of steps
-Lim=int(1/dt)*T
+Lim=int(T/dt)
 
 # Number of simulations 
 
-S=3
+S=1
 
 # Coefficient for generating IC
 c = 0.0001
@@ -311,7 +296,7 @@ G=1
 
 dzeta_var_values=[0]
 
-xi_var_values=[2]
+xi_var_values=np.linspace(0,10,20)
 
 # Strengh of the coupling
 D_values=[20]
@@ -327,9 +312,9 @@ for repetition in range(S):
         div=np.zeros((len(D_values),len(xi_var_values)))
         for xi_var, i in zip(xi_var_values,range(len(xi_var_values))):
             for Ds, j in zip(D_values,range(len(D_values))):
-                div[j][i] , m = run_simulation_second_order(N,c,dt,Ds,d,t,xi_var,dz_var,A,G,Lim)
+                div[j][i] , m = run_simulation_second_order(N,c,dt,Ds,d,t_init,xi_var,dz_var,A,G,Lim)
                 final_state.append(abs(round(np.mean(m),2)))
-
+        plt.clf()
         plt.plot(xi_var_values,final_state,label=f"dz_var = {dz_var}")
         
         print(div)
@@ -345,12 +330,3 @@ plt.xlabel("xi variance")
 plt.title("Order parameter against variance")
 plt.legend()
 plt.show()
-
-
-
-
-    
-        
-
-
-
