@@ -16,8 +16,8 @@ omega=0.1
 
 Amp=0.1
 
-def F(x):
-    return Amp * np.cos(omega*x)
+def F(t):
+    return Amp * np.cos(omega*t)
 
 # Function f from the defintion
 def f(x):
@@ -41,7 +41,7 @@ def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t,xi_var):
     # implented calculating the Laplacian over the whole grid
     laplacian = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - 2*d * x)
 
-    x_tmr = x + dt * (f(x) + D/(2*d) * laplacian)  + sq_m * g(x) * xi+ sq_a * dzeta
+    x_tmr = x + dt * (f(x) + D/(2*d) * laplacian + F(t))  + sq_m * g(x) * xi+ sq_a * dzeta
    
     return x_tmr
 
@@ -54,7 +54,7 @@ def main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t,xi_var):
     laplacian_x = (np.roll(x,1,axis=0) + np.roll(x,-1,axis=0)+ np.roll(x,1,axis=1) + np.roll(x,-1,axis=1)  - (2*d)* x)
     laplacian_tmr = (np.roll(x_tmr,1,axis=0) + np.roll(x_tmr,-1,axis=0)+ np.roll(x_tmr,1,axis=1) + np.roll(x_tmr,-1,axis=1)  - (2*d) * x_tmr)
 
-    x_n = x +  (f(x)+ D/(2*d) * laplacian_x +  f(x_tmr) + D/(2*d) * laplacian_tmr )*dt/2 + sq_m * g(x) * xi/2 + sq_m * g(x_tmr)*xi/2 + sq_a * dzeta
+    x_n = x +  (f(x)+ D/(2*d) * laplacian_x +  f(x_tmr) + D/(2*d) * laplacian_tmr + F(t) + F(t+dt))*dt/2 + sq_m * g(x) * xi/2 + sq_m * g(x_tmr)*xi/2 + sq_a * dzeta
 
     return x_n
 
@@ -144,11 +144,14 @@ def run_simulation_second_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
         plt.plot(xs,m_values)
         plt.grid()
         plt.xlim(0,T)
+        plt.ylim(-1,1)
         plt.ylabel("Average field of oscilators")
         plt.xlabel("Time")
         plt.title(f"Simulations for xi_var = {xi_var} , dz_var= {dz_var} and D = {D}")
-        plt.savefig(f'Graphs/xi_var-equal-to-{xi_var}.png')
+        #plt.savefig(f'Graphs/xi_var-equal-to-{xi_var}.png')
+        plt.show()
         plt.clf()
+
 
 
     # Excluding the time before the system converges to a steady state
@@ -180,10 +183,10 @@ t_init=0
 
 # Total time
 
-T=200
+T=100
 
 # Time step
-dt=10**(-5)
+dt=2.5*10**(-4)
 
 # Total number of steps
 Lim=int(T/dt)
@@ -214,9 +217,9 @@ G=1
 
 #Space for values for simulation
 
-dzeta_var_values=[0]
+dzeta_var_values=[0.01,1.05,5]
 
-xi_var_values=np.linspace(0,10,20)
+xi_var_values=[3]
 
 # Strengh of the coupling
 D_values=[20]
@@ -235,18 +238,18 @@ for repetition in range(S):
                 div[j][i] , m = run_simulation_second_order(N,c,dt,Ds,d,t_init,xi_var,dz_var,A,G,Lim)
                 final_state.append(abs(round(np.mean(m),2)))
         plt.clf()
-        plt.plot(xi_var_values,final_state,label=f"dz_var = {dz_var}")
+        #plt.plot(xi_var_values,final_state,label=f"dz_var = {dz_var}")
         
         print(div)
         
 print(f"{round(time.time()-start_time,2)}seconds")
 
 
-plt.grid()
+"""plt.grid()
 plt.xlim(0,max(xi_var_values))
 plt.ylim(0,1)
 plt.ylabel("Order parameter")
 plt.xlabel("xi variance")
 plt.title("Order parameter against variance")
 plt.legend()
-plt.show()
+plt.show()"""
