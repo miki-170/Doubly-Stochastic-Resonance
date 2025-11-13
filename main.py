@@ -142,12 +142,20 @@ def run_simulation_second_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
     if G==1:
         xs=np.linspace(0,T,len(m_values))
         plt.plot(xs,m_values)
+
+        # Plotting the periodic force
+        ys=10*F(xs)
+        plt.plot(xs,ys)
+        
+        # Adjusting the graph
         plt.grid()
         plt.xlim(0,T)
         plt.ylim(-1,1)
         plt.ylabel("Average field of oscilators")
         plt.xlabel("Time")
         plt.title(f"Simulations for xi_var = {xi_var} , dz_var= {dz_var} and D = {D}")
+
+        # Saving-Showing-Clearing
         #plt.savefig(f'Graphs/xi_var-equal-to-{xi_var}.png')
         plt.show()
         plt.clf()
@@ -173,7 +181,7 @@ def run_simulation_second_order(N,c,dt,D,d,t,xi_var,dz_var,A,G,Lim):
 # Constants
 
 # Size of the grid
-N=50
+N=18
 
 # Dimensions
 d=2
@@ -183,7 +191,7 @@ t_init=0
 
 # Total time
 
-T=100
+T=1000
 
 # Time step
 dt=2.5*10**(-4)
@@ -204,8 +212,11 @@ tmp=Lim/T
 # print solutions A=1 yes A=0 no
 A=0
 
-# Graph solutions G=1 yes G=0 no
+# Graph paths G=1 yes G=0 no
 G=1
+
+# Graph m dependence
+m_Graph=0
 
 
 
@@ -238,18 +249,19 @@ for repetition in range(S):
                 div[j][i] , m = run_simulation_second_order(N,c,dt,Ds,d,t_init,xi_var,dz_var,A,G,Lim)
                 final_state.append(abs(round(np.mean(m),2)))
         plt.clf()
-        #plt.plot(xi_var_values,final_state,label=f"dz_var = {dz_var}")
+        if m_Graph==1:
+            plt.plot(xi_var_values,final_state,label=f"dz_var = {dz_var}")
         
         print(div)
         
 print(f"{round(time.time()-start_time,2)}seconds")
 
-
-"""plt.grid()
-plt.xlim(0,max(xi_var_values))
-plt.ylim(0,1)
-plt.ylabel("Order parameter")
-plt.xlabel("xi variance")
-plt.title("Order parameter against variance")
-plt.legend()
-plt.show()"""
+if m_Graph==1:
+    plt.grid()
+    plt.xlim(0,max(xi_var_values))
+    plt.ylim(0,1)
+    plt.ylabel("Order parameter")
+    plt.xlabel("xi variance")
+    plt.title("Order parameter against variance")
+    plt.legend()
+    plt.show()
