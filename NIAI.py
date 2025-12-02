@@ -134,7 +134,7 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
     IP3_values=[]
     h_values=[]
 
-    neuron_values=[]
+    
     # Create new system
     x = initial_cond(N, v=1) * scalar   # initial field, small random around 0
 
@@ -155,8 +155,14 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
     # Create I inpuptn pattern:
 
     I_pattern=np.zeros((N,N))
-    I_pattern[20:110, 60:70] = 1.0
+    I_pattern[20:180, 90:110] = 1.0
     #I_pattern[60:70, 20:110] = 1.0
+
+
+    # Shwoing input pattern
+    plt.imshow(I_pattern,vmin=0)
+    #plt.show()
+    plt.close()
 
     # Factors for coupling the layers
 
@@ -171,7 +177,7 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
        
         # matrix of average states with coupling terms
 
-        neuron_active_mask = (x > 4).astype(float)
+        neuron_active_mask = (x > 1).astype(float)
         
         # Downscale to Astrocyte grid (Mean pooling approximation via zoom)
         neuron_activity_downscaled = zoom(neuron_active_mask, zoom_in, order=1)
@@ -191,35 +197,37 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
         
         # activity check
 
-        threshold=0.015
+        threshold=0.15
 
         astro_active = np.where(Ca>threshold, 60,0)
         I_astro_field = zoom(astro_active, zoom_out , order=1)
 
 
-        if k<5000:
+        if k<int(1/(dt)):
             current_app = I_app(I_pattern)
         else:
             current_app = 0
         
         I_total = I_astro_field + current_app
         
-        if k%50000==0:
+        if k%int(T/dt/5)==0:
 
             fig , (ax1, ax2, ax3 )= plt.subplots(1,3,figsize=[10,5])
             
-            im1 = ax1.imshow(Ca)
-            ax1.set_title("Normalised Ca")
             
-            im2 = ax2.imshow(astro_active)
-            ax2.set_title(f"Activity with threshold {threshold}")
+            
+            im1 = ax1.imshow(astro_active)
+            ax1.set_title(f"Activity with threshold {threshold}")
             
 
-            im3 = ax3.imshow(I_total)
-            ax3.set_title("Current affecting neurons")
-         
+            im2 = ax2.imshow(I_neuro_input)
+            ax2.set_title("Neuronal response to astrocytes")
 
-            plt.show()
+            im3 = ax3.imshow(Ca)
+            ax3.set_title("Ca")
+
+            print(f"Graph {int(k/int(T/dt/5))} ")
+            plt.savefig(f"xi_var_{xi_var}/evolution{int(k/int(T/dt/5))}.png")
             plt.close(fig)
 
         # --- 2. Integrating neurons ---
@@ -244,7 +252,7 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
 
         # Calculating average state of the system
         
-        neuron_values.append(x[60,60])
+        
         m_values.append(np.mean(x))
             
     # Plotting the average mean field
@@ -261,12 +269,12 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
         plt.legend()
         plt.grid()
         plt.xlim(0,T)
-        plt.show()
+        plt.savefig(f"xi_var_{xi_var}/ca_behaviour.png")
         plt.close()
 
         # Plots of Oscillators
         plt.plot(xs,m_values,label='M_values')
-        plt.plot(xs,neuron_values)
+        
 
         # Plotting the periodic force
         #ys=10*F(xs)
@@ -283,13 +291,14 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
 
         # Saving-Showing-Clearing
         #plt.savefig(f'Graphs/xi_var-equal-to-{xi_var}.png')
-        plt.show()
+        plt.savefig(f"xi_var_{xi_var}/Oscillator behaviour.png")
         plt.close()
 
         # Plotting the Ca layer
         plt.imshow(Ca)
+        plt.colorbar()
         plt.xlim(left=0)
-        plt.show()
+        plt.savefig(f"xi_var_{xi_var}/Calcium final state.png")
         plt.close()
 
 
@@ -315,8 +324,8 @@ omega=10
 Amp=0.1
 
 # Size of the grid
-N_1=130 #Neurons
-N_2=43 #Astrocytes
+N_1=202 #Neurons
+N_2=67 #Astrocytes
 
 # Dimensions
 d=2
@@ -326,16 +335,16 @@ t_init=0
 
 # Total time
 
-T=1
+T=50
 
 # Time step
-dt=0.0001
+dt=10**(-4)
 
 # Total number of steps
 Lim=int(T/dt)
 
 # Coefficient for generating IC
-scalar= 0.0001
+scalar= 0.00001
 
 # Auxilary constant for printing
 tmp=Lim/T
@@ -348,12 +357,12 @@ m_Graph=0
 
 # Values of noise for simulation
 
-dzeta_var_values=[0]
+dzeta_var_values=[3]
 
 xi_var_values=[3]
 
 # Strengh of the coupling
-D_values=[1]
+D_values=[20]
 
 
 for dz_var in dzeta_var_values:
@@ -376,9 +385,9 @@ if m_Graph==1:
     plt.plot(xi_var_values,final_state,label=f"dz_var = {dz_var}")
     plt.grid()
     plt.xlim(0,max(xi_var_values))
-    plt.ylim(0,1)
+    plt.ylim(0)
     plt.ylabel("Order parameter")
     plt.xlabel("xi variance")
     plt.title("Order parameter against variance")
     plt.legend()
-    plt.show()
+    plt.savefig("Noise infulence.png")
