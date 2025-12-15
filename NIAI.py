@@ -24,21 +24,13 @@ v_1, v_2, v_3, v_4,v_5, v_6=6,0.11, 2.2,0.3,0.025,0.2
 k_1, k_2, k_3, k_4=0.5, 1 ,0.1 , 1.1
 d_1, d_2, d_3,d_5=0.13,1.049,0.9434,0.082
 IP_3s=0.16
-tau_r=1/0.14
+tau_r=0.14
 alpha=0.8
 a_2=0.14
 
 
 
 # Functions for the astrocytes layer
-
-
-def I_app(input):
-    return 60*input
-
-def I_astro(Ca):
-    return np.where(Ca>0.15*10**(-6), 60, 0)
-
 
 def Li_Rinzel_derivatives(IP3,Ca,h,I_neuro):
 
@@ -66,7 +58,7 @@ def Li_Rinzel_derivatives(IP3,Ca,h,I_neuro):
     # Calculating the differences
     dCa = I_er - I_pump + I_leak + I_in - I_out
     
-    dIP3 = (IP_3s - IP3) / tau_r + I_plc + I_neuro
+    dIP3 = (IP_3s - IP3) *tau_r + I_plc + I_neuro
 
     dh = (H - h) / tau_n
 
@@ -132,16 +124,16 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
     m_values=[]
     Ca_values=[]
     IP3_values=[]
-    h_values=[]
+    
 
     
     # Create new system
     x = initial_cond(N, v=1) * scalar   # initial field, small random around 0
 
     # Astrocytes (43x43)
-    Ca = np.zeros((N_2,N_2))
-    IP3 = np.zeros((N_2,N_2))
-    h = np.zeros((N_2,N_2))
+    Ca = np.zeros((N_2,N_2))+0.1
+    IP3 = np.zeros((N_2,N_2))+0.1
+    h = np.zeros((N_2,N_2))+0.1
 
     
     x_n = np.zeros((N,N))
@@ -177,11 +169,11 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
        
         # matrix of average states with coupling terms
 
-        neuron_active_mask = (x > 1).astype(float)
+        neuron_active_mask = (x > neuron_threshold).astype(float)
         
         # Downscale to Astrocyte grid (Mean pooling approximation via zoom)
         neuron_activity_downscaled = zoom(neuron_active_mask, zoom_in, order=1)
-        I_neuro_input = np.where(neuron_activity_downscaled > 0.5, 1.0, 0.0)
+        I_neuro_input = np.where(neuron_activity_downscaled > 0.5, I_neuro_coupling, 0.0)
 
         
         # Integrating Astrocytes
@@ -193,18 +185,16 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
 
         Ca_values.append(np.mean(Ca))
         IP3_values.append(np.mean(IP3))
-        h_values.append(np.mean(h))
+        
         
         # activity check
 
-        threshold=0.15
-
-        astro_active = np.where(Ca>threshold, 60,0)
+        astro_active = np.where(Ca>threshold, I_astro_strength,0)
         I_astro_field = zoom(astro_active, zoom_out , order=1)
 
 
-        if k<int(1/(dt)):
-            current_app = I_app(I_pattern)
+        if k<int(1/dt)*10:
+            current_app = I_app* I_pattern
         else:
             current_app = 0
         
@@ -212,18 +202,20 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
         
         if k%int(T/dt/5)==0:
 
-            fig , (ax1, ax2, ax3 )= plt.subplots(1,3,figsize=[10,5])
+            fig , ( ax1, ax2, ax3 )= plt.subplots(1,3,figsize=(12, 3))
+            fig.subplots_adjust(left=0.03,right= 0.95, bottom=0.1, top=0.9, wspace=0.1)
             
-            
-            
-            im1 = ax1.imshow(astro_active)
-            ax1.set_title(f"Activity with threshold {threshold}")
-            
+            boundary =np.max(Ca)
 
-            im2 = ax2.imshow(I_neuro_input)
-            ax2.set_title("Neuronal response to astrocytes")
+            for ax,data, limit in zip([ax1,ax2,ax3],[I_neuro_input,I_total,Ca],[I_neuro_coupling,I_astro_strength+I_app,boundary]):
+                im = ax.imshow(np.round(data,2),vmin=0,vmax = limit)
+                
+                fig.colorbar(im, ax=ax,format='%.2f')
+            
+            ax1.set_title("Neuronal response to astrocytes")
 
-            im3 = ax3.imshow(Ca)
+            ax2.set_title("Total current passed onto neurons")
+
             ax3.set_title("Ca")
 
             print(f"Graph {int(k/int(T/dt/5))} ")
@@ -264,34 +256,20 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
         # Plots of Calcium paths
         plt.plot(xs,Ca_values,label='Ca')
         plt.plot(xs,IP3_values,label='IP3')
-        plt.plot(xs,h_values,label='h')
+        plt.plot(xs,m_values,label='Oscillators average')
+
+        # max for Graphs
+        Lower_lim = min(min(Ca_values),min(IP3_values),min(m_values))
+        Upper_lim = max(max(Ca_values),max(IP3_values),max(m_values))
+
 
         plt.legend()
         plt.grid()
         plt.xlim(0,T)
-        plt.savefig(f"xi_var_{xi_var}/ca_behaviour.png")
-        plt.close()
-
-        # Plots of Oscillators
-        plt.plot(xs,m_values,label='M_values')
-        
-
-        # Plotting the periodic force
-        #ys=10*F(xs)
-        #plt.plot(xs,ys,label='Periodic force')
-        
-        # Adjusting the graph
-        plt.grid()
-        plt.xlim(0,T)
-        plt.legend()
-        plt.ylim(-max(m_values)-0.1,max(m_values)+0.1)
-        plt.ylabel("Average field of oscilators")
+        plt.ylim(Lower_lim-0.1,Upper_lim+0.1)
         plt.xlabel("Time")
         plt.title(f"Simulations for xi_var = {xi_var} , dz_var= {dz_var} and D = {D}")
-
-        # Saving-Showing-Clearing
-        #plt.savefig(f'Graphs/xi_var-equal-to-{xi_var}.png')
-        plt.savefig(f"xi_var_{xi_var}/Oscillator behaviour.png")
+        plt.savefig(f"xi_var_{xi_var}/Oscillations_and_Ca_behaviour.png")
         plt.close()
 
         # Plotting the Ca layer
@@ -320,8 +298,8 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
 # Parameters for the simulation
 
 # For function F
-omega=10
-Amp=0.1
+omega=0
+Amp=0
 
 # Size of the grid
 N_1=202 #Neurons
@@ -335,10 +313,10 @@ t_init=0
 
 # Total time
 
-T=50
+T=1
 
 # Time step
-dt=10**(-4)
+dt=10**(-3)
 
 # Total number of steps
 Lim=int(T/dt)
@@ -357,12 +335,24 @@ m_Graph=0
 
 # Values of noise for simulation
 
-dzeta_var_values=[3]
+dzeta_var_values=[0]
 
-xi_var_values=[3]
+xi_var_values=[0]
 
 # Strengh of the coupling
 D_values=[20]
+
+# Intensity for the current input to the model
+
+I_app = 0.5 # Strenth of pattern input
+I_astro_strength= 0.3 # Input from astrocytes after threshold
+threshold=0.1 # For astrocytes values acting on neurons
+I_neuro_coupling = 0.05 # Value of neurons firing back if 50% is more active 
+neuron_threshold = 0.25 # Value of neuronal excitability
+
+ 
+
+
 
 
 for dz_var in dzeta_var_values:
