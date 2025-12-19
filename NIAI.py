@@ -2,6 +2,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt
 import time
+import os
 from scipy.ndimage import zoom
 #Get the zoom function from Scipy !!!!!
 
@@ -86,7 +87,7 @@ def der_g(x):
     return 2*x
 
 # Intermediate integrating step for second order scheme
-def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t,xi_var, I_total):
+def inter_integration_step(x,x_tmr,xi,dzeta,sq_m,sq_a,t, I_total):
     
 
     # implented calculating the Laplacian over the whole grid
@@ -98,7 +99,7 @@ def inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t,xi_var, I_total):
 
 # Main integrating step for second order scheme
 
-def main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t,xi_var, I_total):
+def main_integration_step(x,x_n,x_tmr,sq_m,sq_a,xi,dzeta,t, I_total):
 
     
     # implented calculating the Laplacian over the whole grid
@@ -110,7 +111,7 @@ def main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t,xi_var, I_tota
     return x_n
 
 # Updating system with new t and x after integration
-def update_system(t,dt,x_n):
+def update_system(t,x_n):
     return (t+dt,x_n)
 
 def normal(Ca):
@@ -118,22 +119,31 @@ def normal(Ca):
 
 # MAIN FUNCTION
 
-def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
+def run_simulation_second_order(N,xi_var,dz_var,T,I_astro_strength):
+    # init time
+    t=0
+    
+    print(f"Running for xi= {xi_var}, I_strength={I_astro_strength}")
+    newpath = f'xi_var_{xi_var}/astro_intenstiy={I_astro_strength}' 
+    if not os.path.exists(newpath):
+        os.makedirs(newpath)
+
 
     # Initate the array for the average potential 
     m_values=[]
     Ca_values=[]
     IP3_values=[]
     
-
     
+    
+
     # Create new system
     x = initial_cond(N, v=1) * scalar   # initial field, small random around 0
 
     # Astrocytes (43x43)
-    Ca = np.zeros((N_2,N_2))+0.1
-    IP3 = np.zeros((N_2,N_2))+0.1
-    h = np.zeros((N_2,N_2))+0.1
+    Ca = np.zeros((N_2,N_2))
+    IP3 = np.zeros((N_2,N_2))
+    h = np.zeros((N_2,N_2))
 
     
     x_n = np.zeros((N,N))
@@ -200,7 +210,9 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
         
         I_total = I_astro_field + current_app
         
+
         if k%int(T/dt/5)==0:
+        
 
             fig , ( ax1, ax2, ax3 )= plt.subplots(1,3,figsize=(12, 3))
             fig.subplots_adjust(left=0.03,right= 0.95, bottom=0.1, top=0.9, wspace=0.1)
@@ -219,7 +231,7 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
             ax3.set_title("Ca")
 
             print(f"Graph {int(k/int(T/dt/5))} ")
-            plt.savefig(f"xi_var_{xi_var}/evolution{int(k/int(T/dt/5))}.png")
+            plt.savefig(newpath + f"/evolution{int(k/int(T/dt/5))}.png")
             plt.close(fig)
 
         # --- 2. Integrating neurons ---
@@ -234,18 +246,24 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
             return 0, 0
         
         # Predictor step
-        x_tmr=inter_integration_step(x,x_tmr,D,d,dt,xi,dzeta,sq_m,sq_a,t,xi_var, I_total)
+        x_tmr=inter_integration_step(x,x_tmr,xi,dzeta,sq_m,sq_a,t, I_total)
 
         # Main Step
-        x_n = main_integration_step(x,x_n,x_tmr,D,d,dt,sq_m,sq_a,xi,dzeta,t,xi_var, I_total)
+        x_n = main_integration_step(x,x_n,x_tmr,sq_m,sq_a,xi,dzeta,t, I_total)
 
         # Updating the system 
-        t,x = update_system(t, dt, x_n)
+        t,x = update_system(t, x_n)
 
         # Calculating average state of the system
         
         
         m_values.append(np.mean(x))
+
+        if k==int(Lim/5) and round(m_values[-1],3)==0:
+            T/=5
+            print('Converged to 0')
+            break
+
             
     # Plotting the average mean field
     if G==1:
@@ -254,29 +272,28 @@ def run_simulation_second_order(N,dt,D,d,t,xi_var,dz_var,G,Lim):
 
 
         # Plots of Calcium paths
-        plt.plot(xs,Ca_values,label='Ca')
-        plt.plot(xs,IP3_values,label='IP3')
-        plt.plot(xs,m_values,label='Oscillators average')
+        plt.plot(xs,Ca_values,label='Ca',color='blue')
+        plt.plot(xs,IP3_values,label='IP3',color='orange')
+        plt.plot(xs,m_values,label='Oscillators average',color='red')
 
         # max for Graphs
         Lower_lim = min(min(Ca_values),min(IP3_values),min(m_values))
         Upper_lim = max(max(Ca_values),max(IP3_values),max(m_values))
-
 
         plt.legend()
         plt.grid()
         plt.xlim(0,T)
         plt.ylim(Lower_lim-0.1,Upper_lim+0.1)
         plt.xlabel("Time")
-        plt.title(f"Simulations for xi_var = {xi_var} , dz_var= {dz_var} and D = {D}")
-        plt.savefig(f"xi_var_{xi_var}/Oscillations_and_Ca_behaviour.png")
+        plt.title(f"Simulations for xi_var = {xi_var} and Current strength = {I_astro_strength}")
+        plt.savefig(newpath+ f"/Oscillations_and_Ca_behaviour.png")
         plt.close()
 
         # Plotting the Ca layer
         plt.imshow(Ca)
         plt.colorbar()
         plt.xlim(left=0)
-        plt.savefig(f"xi_var_{xi_var}/Calcium final state.png")
+        plt.savefig(newpath + f"/Calcium final state.png")
         plt.close()
 
 
@@ -305,18 +322,17 @@ Amp=0
 N_1=202 #Neurons
 N_2=67 #Astrocytes
 
-# Dimensions
-d=2
 
-# Initialise time 
-t_init=0
+# dimensions
+
+d=2
 
 # Total time
 
-T=1
+T=100
 
 # Time step
-dt=10**(-3)
+dt=2.5*10**(-4)
 
 # Total number of steps
 Lim=int(T/dt)
@@ -330,48 +346,54 @@ tmp=Lim/T
 # Graph paths G=1 yes G=0 no
 G=1
 
-# Graph m dependence
-m_Graph=0
-
 # Values of noise for simulation
 
 dzeta_var_values=[0]
 
-xi_var_values=[0]
+xi_var_values=[1]
 
 # Strengh of the coupling
-D_values=[20]
+D = 20
 
 # Intensity for the current input to the model
 
-I_app = 0.5 # Strenth of pattern input
-I_astro_strength= 0.3 # Input from astrocytes after threshold
-threshold=0.1 # For astrocytes values acting on neurons
-I_neuro_coupling = 0.05 # Value of neurons firing back if 50% is more active 
-neuron_threshold = 0.25 # Value of neuronal excitability
-
- 
-
-
+I_app = 10 # Strenth of pattern input
+I_astro_strength= np.linspace(0,1,11) # Input from astrocytes after threshold
+threshold=0.15 # For astrocytes values acting on neurons
+I_neuro_coupling = 0.1 # Value of neurons firing back if 50% is more active 
+neuron_threshold = 0.05 # Value of neuronal excitability
 
 
 for dz_var in dzeta_var_values:
+        
         final_state=[]
+
         # Create the table of convergence, if value is 1 it converged, if it is 0 it diverged
-        div=np.zeros((len(D_values),len(xi_var_values)))
+        div=np.zeros(len(xi_var_values))
+
         for xi_var, i in zip(xi_var_values,range(len(xi_var_values))):
-            for Ds, j in zip(D_values,range(len(D_values))):
-                div[j][i] , m = run_simulation_second_order(N_1,dt,Ds,d,t_init,xi_var,dz_var,G,Lim)
+            for astro_strength in np.round(I_astro_strength,1):
+                div[i] , m = run_simulation_second_order(N_1,xi_var,dz_var,T,astro_strength)
                 final_state.append(abs(round(np.mean(m),2)))
+
         plt.close()
         print(div)
 
 print(f"{time.time()-start_time} seconds")
 
+os.system('say "your program has finished"')
 
+if len(I_astro_strength)>1:
+    plt.plot(I_astro_strength,final_state)
+    plt.grid()
+    plt.xlim(0,max(I_astro_strength))
+    plt.ylim(0)
+    plt.ylabel("Order parameter")
+    plt.xlabel("Astrocyte response strength")
+    plt.title("Order parameter behaviour with xi_var=1")
+    plt.savefig("Noise infulence against strength.png")
 
-
-if m_Graph==1:
+if len(xi_var_values)>1:
     plt.plot(xi_var_values,final_state,label=f"dz_var = {dz_var}")
     plt.grid()
     plt.xlim(0,max(xi_var_values))
